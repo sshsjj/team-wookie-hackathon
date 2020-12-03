@@ -1,3 +1,5 @@
+# Generate per-recipient data for users within the permissioned non-eu footprint
+#
 import os
 import sys
 from argparse import Namespace
@@ -10,16 +12,18 @@ from pyspark.sql import SparkSession, DataFrame
 from spark_datascience.tables.eventlog import Eventlog
 from spark_datascience.output_dataset import OutputDataset
 
-spark: SparkSession = SparkSession.builder.getOrCreate()
 
 
 start_date = "2020-10-01"
 end_date = "2020-11-30"
+OUTPUT_PATH = "s3://s3-data-analysis-usw2-prd/gs/team-wookie/3p-insights-2"
 
+
+
+
+
+spark: SparkSession = SparkSession.builder.getOrCreate()
 eventlog_table = Eventlog()
-
-
-
 
 RV_PATH: str = "s3://s3-recipient-verification-scratch-usw2-prd/scores-full-pq/"
 RV_SCHEMA = T.StructType([
@@ -40,7 +44,6 @@ rv_frame = rv_frame.filter(
 ).withColumnRenamed('rh14','rcpt_to_hash')
 
 UA_MAP_PATH: str = "s3://s3-data-analysis-usw2-prd/eventlog-user-agent-map"
-
 unproxied_frame: DataFrame = spark.read.parquet(UA_MAP_PATH).filter(
     F.col("dt").between(start_date, end_date) & ~F.col("is_proxy")
 ).select(
@@ -150,7 +153,7 @@ df = df.join(complaint_frame, on=["rcpt_to_hash"], how="outer")
 
 output_dataset = OutputDataset(
     df,
-    output_path="s3://s3-data-analysis-usw2-prd/gs/team-wookie/3p-insights-2",
+    output_path=OUTPUT_PATH,
     auto_repartition=True,
     rows_per_file=50000000
 )
